@@ -1,0 +1,1281 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css" />
+        <link rel="stylesheet" type="text/css" href="css/qgis2web.css">
+        <link rel="stylesheet" href="css/MarkerCluster.css" />
+        <link rel="stylesheet" href="css/MarkerCluster.Default.css" />
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+            font: 14px/16px Arial, Helvetica, sans-serif;
+        }
+        .info { padding: 6px 8px; font: 14px/16px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.8); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; } .info h4 { margin: 0 0 5px; color: #777; }
+        .legend { text-align: left; line-height: 18px; color: #555; } .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.7; }
+        </style>
+
+        <title>Onderwijsdata 2014</title>
+    </head>
+    <body>
+        <div id="map" class="leaflet-container style="position: relative; outline: medium none;" tabindex="0">
+          <div class="leaflet-top leaflet-left">
+            <div id="info" class="info leaflet-control" style="width:400px;"></div>
+          </div>
+          <div class="leaflet-bottom leaflet-left">
+            <div id="legenda" class="info legend leaflet-control"></div>
+          </div>
+        </div>
+
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/multi-style-layer.js"></script>
+        <script src="js/leaflet-heat.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/OSMBuildings-Leaflet.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/leaflet-tilelayer-wmts.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/leaflet.markercluster.js"></script>
+        <script src="data/onderwijsdata.js"></script>
+
+        <script>
+        var metadata_Totaalgeldstromen = '<h4>Totaal geldstromen</h4>Het totaal aantal geldstromen bestaat uit de som van ‘totaal bekostiging’, ‘gemeenterekening’, ‘GOAB’ en ‘subsidies’.';
+        var metadata_Uitgavenperleerling = '<h4>Uitgaven per leerling</h4>Het totaal aantal geldstromen is afgezet tegen het aantal leerlingen in het primair onderwijs in een gemeente.<br />Bron: DUO – Ministerie van OCW.';
+        var metadata_Uitgavenperinwoner = '<h4>Uitgaven per inwoner</h4>Het totaal aantal geldstromen is afgezet tegen het aantal inwoners in een gemeente.<br />Bron: CBS.';
+        var metadata_Totaalbekostiging = '<h4>Totaal bekostiging</h4>Het totaal bekostiging is berekend aan de hand van de bekostiging Personeel en Bekostiging Materiaal. Deze cijfers zijn per schooljaar bekend. Via een formule is dit omgerekend naar één kalenderjaar.<br />Bron: DUO – Ministerie van OCW';
+        var metadata_Gemeentefonds = '<h4>Gemeentefonds</h4>Het totale bedrag dat vanuit het Gemeentefonds via het cluster educatie wordt uitgekeerd aan een gemeente.<br />Bron: Septembercirculaire 2014 – Ministerie van BZK en Financiën';
+        var metadata_Gemeenterekening = '<h4>Gemeenterekening</h4>Het totale bedrag dat een gemeente uitgeeft aan het cluster onderwijs.<br />Bron: <a href= "http://openspendinglijstjes.nl">Openspending Lijstjes</a>';
+        var metadata_GOAB = '<h4>GOAB</h4>Dit zijn de middelen voor het Gemeentelijke Onderwijs Achterstanden Beleid. Deze gelden worden verstrekt door het Ministerie van OCW.<br />Bron: <a href= "http://opendata.rijksbegroting.nl/#dataset_6">http://opendata.rijksbegroting.nl/#dataset_6</a>';
+        var metadata_Subsidies = '<h4>Subsidies</h4>Dit zijn de subsidies die aan schoolinstellingen worden verstrekt. Deze subsidies zijn omgerekend naar gemeenteniveau. Hier zijn alleen subsidies opgenomen die rechtstreeks naar schoolinstellingen zijn uitbetaald.<br />Bron: <a href="http://opendata.rijksbegroting.nl/#dataset_6">http://opendata.rijksbegroting.nl/#dataset_6</a>';
+
+        var legenda_Totaalgeldstromen = '<table style="text-align:right"><tr><td><i style="background:#ffffcc"></i></td><td>0</td><td>–</td><td>10</td></tr><tr><td><i style="background:#d9f0a3"></i></td><td>10</td><td>–</td><td>20</td></tr><tr><td><i style="background:#addd8e"></i></td><td>20</td><td>–</td><td>30</td></tr><tr><td><i style="background:#78c679"></i></td><td>30</td><td>–</td><td>40</td></tr><tr><td><i style="background:#41ab5d"></i></td><td>40</td><td>–</td><td>50</td></tr><tr><td><i style="background:#238443"></i></td><td>50</td><td>–</td><td>60</td></tr><tr><td><i style="background:#238443"></i></td><td>60</td><td>–</td><td>70</td></tr><tr><td><i style="background:#005a32"></i></td><td>&nbsp;</td><td>&gt;</td><td>70</td></tr></table>';
+
+        var legenda_Uitgavenperleerling = '<table style="text-align:right"><tr><td><i style="background:#ffffd4"></i></td><td>0</td><td>–</td><td>4.000</td></tr><tr><td><i style="background:#fee391"></i></td><td>4.000</td><td>–</td><td>5.000</td></tr><tr><td><i style="background:#fec44f"></i></td><td>5.000</td><td>–</td><td>6.000</td></tr><tr><td><i style="background:#fe9929"></i></td><td>6.000</td><td>–</td><td>7.000</td></tr><tr><td><i style="background:#8c2d04"></i></td><td>&nbsp;</td><td>&gt;</td><td>7.000</td></tr></table>';
+
+        var legenda_Uitgavenperinwoner = '<table style="text-align:right"><tr><td><i style="background:#f6eff7"></i></td><td>0</td><td>–</td><td>300</td></tr><tr><td><i style="background:#d0d1e6"></i></td><td>300</td><td>–</td><td>400</td></tr><tr><td><i style="background:#a6bddb"></i></td><td>400</td><td>–</td><td>500</td></tr><tr><td><i style="background:#67a9cf"></i></td><td>500</td><td>–</td><td>600</td></tr><tr><td><i style="background:#3690c0"></i></td><td>600</td><td>–</td><td>700</td></tr><tr><td><i style="background:#02818a"></i></td><td>700</td><td>–</td><td>800</td></tr><tr><td><i style="background:#016450"></i></td><td>&nbsp;</td><td>&gt;</td><td>800</td></tr></table>';
+
+        var legenda_Totaalbekostiging = '<table style="text-align:right"><tr><td><i style="background:#fee5d9"></i></td><td>0</td><td>–</td><td>10</td></tr><tr><td><i style="background:#fcbba1"></i></td><td>10</td><td>–</td><td>20</td></tr><tr><td><i style="background:#fc9272"></i></td><td>20</td><td>–</td><td>30</td></tr><tr><td><i style="background:#fb6a4a"></i></td><td>30</td><td>–</td><td>40</td></tr><tr><td><i style="background:#ef3b2c"></i></td><td>40</td><td>–</td><td>50</td></tr><tr><td><i style="background:#cb181d"></i></td><td>50</td><td>–</td><td>60</td></tr><tr><td><i style="background:#99000d"></i></td><td>&nbsp;</td><td>&gt;</td><td>60</td></tr></table>';
+
+        var legenda_Gemeentefonds = '<table style="text-align:right"><tr><td><i style="background:#eff3ff"></i></td><td>0</td><td>–</td><td>5</td></tr><tr><td><i style="background:#c6dbef"></i></td><td>5</td><td>–</td><td>10</td></tr><tr><td><i style="background:#9ecae1"></i></td><td>10</td><td>–</td><td>20</td></tr><tr><td><i style="background:#6baed6"></i></td><td>20</td><td>–</td><td>40</td></tr><tr><td><i style="background:#4292c6"></i></td><td>40</td><td>–</td><td>50</td></tr><tr><td><i style="background:#2171b5"></i></td><td>50</td><td>–</td><td>60</td></tr><tr><td><i style="background:#084594"></i></td><td>&nbsp;</td><td>&gt;</td><td>60</td></tr></table>';
+
+        var legenda_Gemeenterekening = '<table style="text-align:right"><tr><td><i style="background:#f7fcfd"></i></td><td>0</td><td>–</td><td>0,5</td></tr><tr><td><i style="background:#e5f5f9"></i></td><td>0,5</td><td>–</td><td>1</td></tr><tr><td><i style="background:#ccece6"></i></td><td>1</td><td>–</td><td>1,5</td></tr><tr><td><i style="background:#99d8c9"></i></td><td>1,5</td><td>–</td><td>2</td></tr><tr><td><i style="background:#66c2a4"></i></td><td>2</td><td>–</td><td>2,5</td></tr><tr><td><i style="background:#41ae76"></i></td><td>2,5</td><td>–</td><td>3</td></tr><tr><td><i style="background:#238b45"></i></td><td>3</td><td>–</td><td>3,5</td></tr><tr><td><i style="background:#006d2c"></i></td><td>3,5</td><td>–</td><td>4</td></tr><tr><td><i style="background:#00441b"></i></td><td>&nbsp;</td><td>&gt;</td><td>4</td></tr></table>';
+
+        var legenda_GOAB = '<table style="text-align:right"><tr><td><i style="background:#f1eef6"></i></td><td>0</td><td>-</td><td>1</td></tr><tr><td><i style="background:#d4b9da"></i></td><td>1</td><td>–</td><td>2</td></tr><tr><td><i style="background:#c994c7"></i></td><td>2</td><td>–</td><td>3</td></tr><tr><td><i style="background:#df65b0"></i></td><td>3</td><td>–</td><td>4</td></tr><tr><td><i style="background:#e7298a"></i></td><td>4</td><td>–</td><td>5</td></tr><tr><td><i style="background:#ce1256"></i></td><td>5</td><td>–</td><td>6</td></tr><tr><td><i style="background:#91003f"></i></td><td>&nbsp;</td><td>&gt;</td><td>6</td></tr></table>';
+
+        var legenda_Subsidies = '<table style="text-align:right"><tr><td><i style="background:#feebe2"></i></td><td>&nbsp;</td><td>&nbsp;</td><td>&#8804; 0</td></tr><tr><td><i style="background:#fcc5c0"></i></td><td>0</td><td>–</td><td>25</td></tr><tr><td><i style="background:#fa9fb5"></i></td><td>25</td><td>–</td><td>50</td></tr><tr><td><i style="background:#f768a1"></i></td><td>50</td><td>–</td><td>75</td></tr><tr><td><i style="background:#dd3497"></i></td><td>75</td><td>–</td><td>100</td></tr><tr><td><i style="background:#ae017e"></i></td><td>100</td><td>–</td><td>125</td></tr><tr><td><i style="background:#7a0177"></i></td><td>&nbsp;</td><td>&gt;</td><td>125</td></tr></table>';
+
+        document.getElementById("info").innerHTML = metadata_Totaalgeldstromen;
+        document.getElementById("legenda").innerHTML = legenda_Totaalgeldstromen;
+
+        var highlightLayer;
+
+        function highlightFeature(e) {
+            highlightLayer = e.target;
+
+            if (e.target.feature.geometry.type === 'LineString') {
+              highlightLayer.setStyle({
+                color: '#ffff00',
+              });
+            } else {
+              highlightLayer.setStyle({
+                fillColor: '#ffff00',
+                fillOpacity: 1
+              });
+            }
+
+            highlightLayer.openPopup();
+        }
+
+        L.ImageOverlay.include({
+            getBounds: function () {
+                return this._bounds;
+            }
+        });
+
+        var map = L.map('map', {
+            zoomControl:false, maxZoom:28, minZoom:1
+        }).fitBounds([[50.712112896185104,2.2521972656250004],[53.537042913738745,9.591064453125002]]);
+
+        var hash = new L.Hash(map);
+
+        var bounds_group = new L.featureGroup([]);
+        var basemap0 = L.tileLayer('http://{s}.www.toolserver.org/tiles/bw-mapnik/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
+            maxZoom: 28
+        });
+
+        basemap0.addTo(map);
+
+        function setBounds() {
+        }
+
+        function geoJson2heat(geojson, weight) {
+          return geojson.features.map(function(feature) {
+            return [
+              feature.geometry.coordinates[1],
+              feature.geometry.coordinates[0],
+              feature.properties[weight]
+            ];
+          });
+        }
+
+        function round(value, precision) {
+          var multiplier = Math.pow(10, precision || 0);
+          return Math.round(value * multiplier) / multiplier;
+        }
+
+        <!-- Subsidies -->
+
+        function pop_Subsidies(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                    layer.setStyle(style_Subsidies(feature));
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table class="info" width="250">\
+                    <tr>\
+                        <td colspan="2">Gemeente ' + (feature.properties['GEMEENTENAAM'] !== null ? Autolinker.link(String(feature.properties['GEMEENTENAAM'])) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">Subsidies (x duizend): € ' + (feature.properties['TOT_SUBSIDIES'] !== null ? Autolinker.link(String(round(feature.properties['TOT_SUBSIDIES'], 1))) : '') + '</td>\
+                    </tr>\
+            </table>';
+            layer.bindPopup(popupContent);
+        }
+
+        function style_Subsidies(feature) {
+            switch(feature.properties['TOT_SUBSIDIES_CAT']) {
+                case '<= 0':
+                    return {
+                pane: 'pane_Subsidies',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(254,235,226,1.0)',
+            }
+                    break;
+                case '0 - 25':
+                    return {
+                pane: 'pane_Subsidies',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(252,197,192,1.0)',
+            }
+                    break;
+                case '25 - 50':
+                    return {
+                pane: 'pane_Subsidies',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(250,159,181,1.0)',
+            }
+                    break;
+                case '50 - 75':
+                    return {
+                pane: 'pane_Subsidies',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(247,104,161,1.0)',
+            }
+                    break;
+                case '75 - 100':
+                    return {
+                pane: 'pane_Subsidies',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(221,52,151,1.0)',
+            }
+                    break;
+                case '100 - 125':
+                    return {
+                pane: 'pane_Subsidies',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(174,1,126,1.0)',
+            }
+                    break;
+                case '> 125':
+                    return {
+                pane: 'pane_Subsidies',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(122,1,119,1.0)',
+            }
+                    break;
+            }
+        }
+
+        map.createPane('pane_Subsidies');
+        map.getPane('pane_Subsidies').style.zIndex = 400;
+        map.getPane('pane_Subsidies').style['mix-blend-mode'] = 'normal';
+
+    var layer_Subsidies = new L.geoJson.multiStyle(json_onderwijsdata, {
+        attribution: '<a href=""></a>',
+        pane: 'pane_Subsidies',
+        onEachFeature: pop_Subsidies,
+        styles: [style_Subsidies,],
+        attribution: '&copy; <a href="http://www.gemeentenatlas.nl/" target="_blank">Gemeentenatlas</a>, <a href="http://creativecommons.org/licenses/by/2.0/" target="_blank">CC-BY</a>',
+        name: 'Subsidies'
+    });
+        bounds_group.addLayer(layer_Subsidies);
+
+        <!-- GOAB -->
+
+        function pop_GOAB(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                    layer.setStyle(style_GOAB(feature));
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table class="info" width="250">\
+                    <tr>\
+                        <td colspan="2">Gemeente ' + (feature.properties['GEMEENTENAAM'] !== null ? Autolinker.link(String(feature.properties['GEMEENTENAAM'])) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">GOAB (x miljoen): € ' + (feature.properties['TOT_GOAB'] !== null ? Autolinker.link(String(round(feature.properties['TOT_GOAB'], 1))) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent);
+        }
+
+        function style_GOAB(feature) {
+            switch(feature.properties['TOT_GOAB_CAT']) {
+                case '0 - 1':
+                    return {
+                pane: 'pane_GOAB',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(241,238,246,1.0)',
+            }
+                    break;
+                case '1 - 2':
+                    return {
+                pane: 'pane_GOAB',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(212,185,218,1.0)',
+            }
+                    break;
+                case '2 - 3':
+                    return {
+                pane: 'pane_GOAB',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(201,148,199,1.0)',
+            }
+                    break;
+                case '3 - 4':
+                    return {
+                pane: 'pane_GOAB',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(223,101,176,1.0)',
+            }
+                    break;
+                case '4 - 5':
+                    return {
+                pane: 'pane_GOAB',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(231,41,138,1.0)',
+            }
+                    break;
+                case '5 - 6':
+                    return {
+                pane: 'pane_GOAB',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(206,18,86,1.0)',
+            }
+                    break;
+                case '> 6':
+                    return {
+                pane: 'pane_GOAB',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(145,0,63,1.0)',
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_GOAB');
+        map.getPane('pane_GOAB').style.zIndex = 401;
+        map.getPane('pane_GOAB').style['mix-blend-mode'] = 'normal';
+
+    var layer_GOAB = new L.geoJson.multiStyle(json_onderwijsdata, {
+        attribution: '<a href=""></a>',
+        pane: 'pane_GOAB',
+        onEachFeature: pop_GOAB,
+        styles: [style_GOAB,],
+        attribution: '&copy; <a href="http://www.gemeentenatlas.nl/" target="_blank">Gemeentenatlas</a>, <a href="http://creativecommons.org/licenses/by/2.0/" target="_blank">CC-BY</a>',
+        name: 'GOAB'
+    });
+        bounds_group.addLayer(layer_GOAB);
+
+        <!-- Gemeenterekening -->
+
+        function pop_Gemeenterekening(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                    layer.setStyle(style_Gemeenterekening(feature));
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table class="info" width="250">\
+                    <tr>\
+                        <td colspan="2">Gemeente ' + (feature.properties['GEMEENTENAAM'] !== null ? Autolinker.link(String(feature.properties['GEMEENTENAAM'])) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">Gemeenterekening (x miljoen): € ' + (feature.properties['TOT_GEMEENTEREKENING'] !== null ? Autolinker.link(String(round(feature.properties['TOT_GEMEENTEREKENING'], 1))) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent);
+        }
+
+        function style_Gemeenterekening(feature) {
+            switch(feature.properties['TOT_GEMEENTEREKENING_CAT']) {
+                case '0 - 0,5':
+                    return {
+                pane: 'pane_Gemeenterekening',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(247,252,253,1.0)',
+            }
+                    break;
+                case '0,5 - 1':
+                    return {
+                pane: 'pane_Gemeenterekening',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(229,245,249,1.0)',
+            }
+                    break;
+                case '1 - 1,5':
+                    return {
+                pane: 'pane_Gemeenterekening',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(204,236,230,1.0)',
+            }
+                    break;
+                case '1,5 - 2':
+                    return {
+                pane: 'pane_Gemeenterekening',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(153,216,201,1.0)',
+            }
+                    break;
+                case '2 - 2,5':
+                    return {
+                pane: 'pane_Gemeenterekening',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(102,194,164,1.0)',
+            }
+                    break;
+                case '2,5 - 3':
+                    return {
+                pane: 'pane_Gemeenterekening',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(65,174,118,1.0)',
+            }
+                    break;
+                case '3 - 3,5':
+                    return {
+                pane: 'pane_Gemeenterekening',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(35,139,69,1.0)',
+            }
+                    break;
+                case '3,5 - 4':
+                    return {
+                pane: 'pane_Gemeenterekening',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(0,109,44,1.0)',
+            }
+                    break;
+                case '> 4':
+                    return {
+                pane: 'pane_Gemeenterekening',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(0,68,27,1.0)',
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_Gemeenterekening');
+        map.getPane('pane_Gemeenterekening').style.zIndex = 402;
+        map.getPane('pane_Gemeenterekening').style['mix-blend-mode'] = 'normal';
+
+    var layer_Gemeenterekening = new L.geoJson.multiStyle(json_onderwijsdata, {
+        attribution: '<a href=""></a>',
+        pane: 'pane_Gemeenterekening',
+        onEachFeature: pop_Gemeenterekening,
+        styles: [style_Gemeenterekening,],
+        attribution: '&copy; <a href="http://www.gemeentenatlas.nl/" target="_blank">Gemeentenatlas</a>, <a href="http://creativecommons.org/licenses/by/2.0/" target="_blank">CC-BY</a>',
+        name: 'Gemeenterekening'
+    });
+        bounds_group.addLayer(layer_Gemeenterekening);
+
+        <!-- Gemeentefonds -->
+
+        function pop_Gemeentefonds(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                    layer.setStyle(style_Gemeentefonds(feature));
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table class="info" width="250">\
+                    <tr>\
+                        <td colspan="2">Gemeente ' + (feature.properties['GEMEENTENAAM'] !== null ? Autolinker.link(String(feature.properties['GEMEENTENAAM'])) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">Gemeentefonds (x miljoen): € ' + (feature.properties['TOT_GEMEENTEFONDS'] !== null ? Autolinker.link(String(round(feature.properties['TOT_GEMEENTEFONDS'], 1))) : '') + '</td>\
+                    </tr>\
+            </table>';
+            layer.bindPopup(popupContent);
+        }
+
+        function style_Gemeentefonds(feature) {
+            switch(feature.properties['TOT_GEMEENTEFONDS_CAT']) {
+                case '0 - 5':
+                    return {
+                pane: 'pane_Gemeentefonds',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(239,243,255,1.0)',
+            }
+                    break;
+                case '5 - 10':
+                    return {
+                pane: 'pane_Gemeentefonds',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(198,219,239,1.0)',
+            }
+                    break;
+                case '10 - 20':
+                    return {
+                pane: 'pane_Gemeentefonds',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(158,202,225,1.0)',
+            }
+                    break;
+                case '20 - 40':
+                    return {
+                pane: 'pane_Gemeentefonds',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(107,174,214,1.0)',
+            }
+                    break;
+                case '50 - 60':
+                    return {
+                pane: 'pane_Gemeentefonds',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(33,113,181,1.0)',
+            }
+                    break;
+                case '> 60':
+                    return {
+                pane: 'pane_Gemeentefonds',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(8,69,148,1.0)',
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_Gemeentefonds');
+        map.getPane('pane_Gemeentefonds').style.zIndex = 403;
+        map.getPane('pane_Gemeentefonds').style['mix-blend-mode'] = 'normal';
+
+    var layer_Gemeentefonds = new L.geoJson.multiStyle(json_onderwijsdata, {
+        attribution: '<a href=""></a>',
+        pane: 'pane_Gemeentefonds',
+        onEachFeature: pop_Gemeentefonds,
+        styles: [style_Gemeentefonds,],
+        attribution: '&copy; <a href="http://www.gemeentenatlas.nl/" target="_blank">Gemeentenatlas</a>, <a href="http://creativecommons.org/licenses/by/2.0/" target="_blank">CC-BY</a>',
+        name: 'Gemeentefonds'
+    });
+        bounds_group.addLayer(layer_Gemeentefonds);
+
+        <!-- Totaal bekostiging -->
+
+        function pop_Totaalbekostiging(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                    layer.setStyle(style_Totaalbekostiging(feature));
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table class="info" width="250">\
+                    <tr>\
+                        <td colspan="2">Gemeente ' + (feature.properties['GEMEENTENAAM'] !== null ? Autolinker.link(String(feature.properties['GEMEENTENAAM'])) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">Totaal bekostiging (x miljoen): €' + (feature.properties['TOT_BEKOSTIGING'] !== null ? Autolinker.link(String(round(feature.properties['TOT_BEKOSTIGING'], 1))) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent);
+        }
+
+        function style_Totaalbekostiging(feature) {
+            switch(feature.properties['TOT_BEKOSTIGING_CAT']) {
+                case '0 - 10':
+                    return {
+                pane: 'pane_Totaalbekostiging',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(254,229,217,1.0)',
+            }
+                    break;
+                case '10 - 20':
+                    return {
+                pane: 'pane_Totaalbekostiging',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(252,187,161,1.0)',
+            }
+                    break;
+                case '20 - 30':
+                    return {
+                pane: 'pane_Totaalbekostiging',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(252,146,114,1.0)',
+            }
+                    break;
+                case '30 - 40':
+                    return {
+                pane: 'pane_Totaalbekostiging',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(251,106,74,1.0)',
+            }
+                    break;
+                case '40 - 50':
+                    return {
+                pane: 'pane_Totaalbekostiging',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(239,59,44,1.0)',
+            }
+                    break;
+                case '50 - 60':
+                    return {
+                pane: 'pane_Totaalbekostiging',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(203,24,29,1.0)',
+            }
+                    break;
+                case '> 60':
+                    return {
+                pane: 'pane_Totaalbekostiging',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(153,0,13,1.0)',
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_Totaalbekostiging');
+        map.getPane('pane_Totaalbekostiging').style.zIndex = 404;
+        map.getPane('pane_Totaalbekostiging').style['mix-blend-mode'] = 'normal';
+
+    var layer_Totaalbekostiging = new L.geoJson.multiStyle(json_onderwijsdata, {
+        attribution: '<a href=""></a>',
+        pane: 'pane_Totaalbekostiging',
+        onEachFeature: pop_Totaalbekostiging,
+        styles: [style_Totaalbekostiging,],
+        attribution: '&copy; <a href="http://www.gemeentenatlas.nl/" target="_blank">Gemeentenatlas</a>, <a href="http://creativecommons.org/licenses/by/2.0/" target="_blank">CC-BY</a>',
+        name: 'Totaalbekostiging'
+    });
+        bounds_group.addLayer(layer_Totaalbekostiging);
+
+        <!-- Uitgaven per inwoner -->
+
+        function pop_Uitgavenperinwoner(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                    layer.setStyle(style_Uitgavenperinwoner(feature));
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table class="info" width="250">\
+                    <tr>\
+                        <td colspan="2">Gemeente ' + (feature.properties['GEMEENTENAAM'] !== null ? Autolinker.link(String(feature.properties['GEMEENTENAAM'])) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">Uitgaven per inwoner: €' + (feature.properties['TOT_GELDSTROMEN_PER_INWONER'] !== null ? Autolinker.link(String(Math.round(feature.properties['TOT_GELDSTROMEN_PER_INWONER']))) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent);
+        }
+
+        function style_Uitgavenperinwoner(feature) {
+            switch(feature.properties['TOT_GELDSTROMEN_PER_INWONER_CAT']) {
+                case '0 - 300':
+                    return {
+                pane: 'pane_Uitgavenperinwoner',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(246,239,247,1.0)',
+            }
+                    break;
+                case '300 - 400':
+                    return {
+                pane: 'pane_Uitgavenperinwoner',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(208,209,230,1.0)',
+            }
+                    break;
+                case '400 - 500':
+                    return {
+                pane: 'pane_Uitgavenperinwoner',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(166,189,219,1.0)',
+            }
+                    break;
+                case '500 - 600':
+                    return {
+                pane: 'pane_Uitgavenperinwoner',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(103,169,207,1.0)',
+            }
+                    break;
+                case '600 - 700':
+                    return {
+                pane: 'pane_Uitgavenperinwoner',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(54,144,192,1.0)',
+            }
+                    break;
+                case '700 - 800':
+                    return {
+                pane: 'pane_Uitgavenperinwoner',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(2,129,138,1.0)',
+            }
+                    break;
+                case '> 800':
+                    return {
+                pane: 'pane_Uitgavenperinwoner',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(1,100,80,1.0)',
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_Uitgavenperinwoner');
+        map.getPane('pane_Uitgavenperinwoner').style.zIndex = 405;
+        map.getPane('pane_Uitgavenperinwoner').style['mix-blend-mode'] = 'normal';
+
+        var layer_Uitgavenperinwoner = new L.geoJson.multiStyle(json_onderwijsdata, {
+        attribution: '<a href=""></a>',
+        pane: 'pane_Uitgavenperinwoner',
+        onEachFeature: pop_Uitgavenperinwoner,
+        styles: [style_Uitgavenperinwoner,],
+        attribution: '&copy; <a href="http://www.gemeentenatlas.nl/" target="_blank">Gemeentenatlas</a>, <a href="http://creativecommons.org/licenses/by/2.0/" target="_blank">CC-BY</a>',
+        name: 'Uitgavenperinwoner'
+        });
+        bounds_group.addLayer(layer_Uitgavenperinwoner);
+
+
+        <!-- Uitgaven per leerling -->
+
+        function pop_Uitgavenperleerling(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                    layer.setStyle(style_Uitgavenperleerling(feature));
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table class="info" width="250">\
+                    <tr>\
+                        <td colspan="2">Gemeente ' + (feature.properties['GEMEENTENAAM'] !== null ? Autolinker.link(String(feature.properties['GEMEENTENAAM'])) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">Uitgaven per leerling: €' + (feature.properties['TOT_GELDSTROMEN_PER_LEERLING'] !== null ? Autolinker.link(String(Math.round(feature.properties['TOT_GELDSTROMEN_PER_LEERLING']))) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent);
+        }
+
+        function style_Uitgavenperleerling(feature) {
+            switch(feature.properties['TOT_GELDSTROMEN_PER_LEERLING_CAT']) {
+                case '0 - 4.000':
+                    return {
+                pane: 'pane_Uitgavenperleerling',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,255,212,1.0)',
+            }
+                    break;
+                case '4.000 - 5.000':
+                    return {
+                pane: 'pane_Uitgavenperleerling',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(254,217,142,1.0)',
+            }
+                    break;
+                case '5.000 - 6.000':
+                    return {
+                pane: 'pane_Uitgavenperleerling',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(254,153,41,1.0)',
+            }
+                    break;
+                case '6.000 - 7.000':
+                    return {
+                pane: 'pane_Uitgavenperleerling',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(217,95,14,1.0)',
+            }
+                    break;
+                case '> 7.000':
+                    return {
+                pane: 'pane_Uitgavenperleerling',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(153,52,4,1.0)',
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_Uitgavenperleerling');
+        map.getPane('pane_Uitgavenperleerling').style.zIndex = 405;
+        map.getPane('pane_Uitgavenperleerling').style['mix-blend-mode'] = 'normal';
+
+    var layer_Uitgavenperleerling = new L.geoJson.multiStyle(json_onderwijsdata, {
+        attribution: '<a href=""></a>',
+        pane: 'pane_Uitgavenperleerling',
+        onEachFeature: pop_Uitgavenperleerling,
+        styles: [style_Uitgavenperleerling,],
+        attribution: '&copy; <a href="http://www.gemeentenatlas.nl/" target="_blank">Gemeentenatlas</a>, <a href="http://creativecommons.org/licenses/by/2.0/" target="_blank">CC-BY</a>',
+        name: 'Uitgavenperleerling'
+    });
+        bounds_group.addLayer(layer_Uitgavenperleerling);
+
+        <!-- Totaal geldstomen -->
+
+        function pop_Totaalgeldstromen(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    if (typeof layer.closePopup == 'function') {
+                        layer.closePopup();
+                    } else {
+                        layer.eachLayer(function(feature){
+                            feature.closePopup()
+                        });
+                    }
+                    layer.setStyle(style_Totaalgeldstromen(feature));
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table class="info" width="300">\
+                    <tr>\
+                        <td colspan="2"><H4>Gemeente ' + (feature.properties['GEMEENTENAAM'] !== null ? Autolinker.link(String(feature.properties['GEMEENTENAAM'])) : '') + '</H4></td>\
+                    </tr>\
+                    <tr>\
+                        <td>Totaal geldstromen (x miljoen):</td><td>€ ' + (feature.properties['TOT_GELDSTROMEN'] !== null ? Autolinker.link(String(round(feature.properties['TOT_GELDSTROMEN'], 1))) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td>Uitgaven per leerling:</td><td>€ ' + (feature.properties['TOT_GELDSTROMEN_PER_LEERLING'] !== null ? Autolinker.link(String(Math.round(feature.properties['TOT_GELDSTROMEN_PER_LEERLING']))) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td>Uitgaven per inwoner:</td><td>€ ' + (feature.properties['TOT_GELDSTROMEN_PER_INWONER'] !== null ? Autolinker.link(String(Math.round(feature.properties['TOT_GELDSTROMEN_PER_INWONER']))) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td>Totaal bekostiging (x miljoen):</td><td>€ ' + (feature.properties['TOT_BEKOSTIGING'] !== null ? Autolinker.link(String(round(feature.properties['TOT_BEKOSTIGING'], 1))) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td>Gemeentefonds (x miljoen):</td><td>€ ' + (feature.properties['TOT_GEMEENTEFONDS'] !== null ? Autolinker.link(String(round(feature.properties['TOT_GEMEENTEFONDS'], 1))) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td>Gemeenterekening (x miljoen):</td><td>€ ' + (feature.properties['TOT_GEMEENTEREKENING'] !== null ? Autolinker.link(String(round(feature.properties['TOT_GEMEENTEREKENING'], 1))) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td>GOAB (x miljoen):</td><td>€ ' + (feature.properties['TOT_GOAB'] !== null ? Autolinker.link(String(round(feature.properties['TOT_GOAB'], 1))) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td>Subsidies (x duizend):</td><td>€ ' + (feature.properties['TOT_SUBSIDIES'] !== null ? Autolinker.link(String(round(feature.properties['TOT_SUBSIDIES'], 1))) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent);
+        }
+
+        function style_Totaalgeldstromen(feature) {
+            switch(feature.properties['TOT_GELDSTROMEN_CAT']) {
+                case '0 - 10':
+                    return {
+                pane: 'pane_Totaalgeldstromen',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,255,229,1.0)',
+            }
+                    break;
+                case '10 - 20':
+                    return {
+                pane: 'pane_Totaalgeldstromen',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(247,252,185,1.0)',
+            }
+                    break;
+                case '20 - 30':
+                    return {
+                pane: 'pane_Totaalgeldstromen',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(217,240,163,1.0)',
+            }
+                    break;
+                case '30 - 40':
+                    return {
+                pane: 'pane_Totaalgeldstromen',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(173,221,142,1.0)',
+            }
+                    break;
+                case '40 - 50':
+                    return {
+                pane: 'pane_Totaalgeldstromen',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(120,198,121,1.0)',
+            }
+                    break;
+                case '50 - 60':
+                    return {
+                pane: 'pane_Totaalgeldstromen',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(65,171,93,1.0)',
+            }
+                    break;
+                case '60 - 70':
+                    return {
+                pane: 'pane_Totaalgeldstromen',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(35,132,67,1.0)',
+              }
+                    break;
+                case '> 70':
+                    return {
+                pane: 'pane_Totaalgeldstromen',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0,
+                fillOpacity: 1,
+                fillColor: 'rgba(0,90,50,1.0)',
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_Totaalgeldstromen');
+        map.getPane('pane_Totaalgeldstromen').style.zIndex = 406;
+        map.getPane('pane_Totaalgeldstromen').style['mix-blend-mode'] = 'normal';
+
+    var layer_Totaalgeldstromen = new L.geoJson.multiStyle(json_onderwijsdata, {
+        attribution: '<a href=""></a>',
+        pane: 'pane_Totaalgeldstromen',
+        onEachFeature: pop_Totaalgeldstromen,
+        styles: [style_Totaalgeldstromen,],
+        attribution: '&copy; <a href="http://www.gemeentenatlas.nl/" target="_blank">Gemeentenatlas</a>, <a href="http://creativecommons.org/licenses/by/2.0/" target="_blank">CC-BY</a>',
+        name: 'Totaalgeldstromen'
+    });
+        bounds_group.addLayer(layer_Totaalgeldstromen);
+        map.addLayer(layer_Totaalgeldstromen);
+
+        map.on('overlayremove', function(a) {
+          var arr = bounds_group.getLayers();
+          count = 0;
+          for (var i = 0; i < 7; i++) {if (map.hasLayer(arr[i])) {count = count + 1;}}
+          if (count == 0) {document.getElementById("info").innerHTML = 'Selecteer een kaartlaag'; document.getElementById("legenda").innerHTML = '&nbsp;'; checked_layer = '';}
+        });
+
+       var checked_layer = 'Totaalgeldstromen';
+
+        map.on('overlayadd', function(a) {
+           var checks = document.querySelectorAll('[type = "checkbox"]'), i;
+            if (a.layer.options.name == 'Totaalgeldstromen') {if (checked_layer != 'Totaalgeldstromen') {document.getElementById("info").innerHTML = metadata_Totaalgeldstromen; document.getElementById("legenda").innerHTML = legenda_Totaalgeldstromen; checked_layer = 'Totaalgeldstromen';}} else {checks[0].checked = false;}
+            if (a.layer.options.name == 'Uitgavenperleerling') {if (checked_layer != 'Uitgavenperleerling') {document.getElementById("info").innerHTML = metadata_Uitgavenperleerling; document.getElementById("legenda").innerHTML = legenda_Uitgavenperleerling; checked_layer = 'Uitgavenperleerling';}} else {checks[1].checked = false;}
+            if (a.layer.options.name == 'Uitgavenperinwoner') {if (checked_layer != 'Uitgavenperinwoner') {document.getElementById("info").innerHTML = metadata_Uitgavenperinwoner; document.getElementById("legenda").innerHTML = legenda_Uitgavenperinwoner; checked_layer = 'Uitgavenperinwoner';}} else {checks[2].checked = false;}
+            if (a.layer.options.name == 'Totaalbekostiging') {if (checked_layer != 'Totaalbekostiging') {document.getElementById("info").innerHTML = metadata_Totaalbekostiging; document.getElementById("legenda").innerHTML = legenda_Totaalbekostiging; checked_layer = 'Totaalbekostiging';}} else {checks[3].checked = false;}
+            if (a.layer.options.name == 'Gemeentefonds') {if (checked_layer != 'Gemeentefonds') {document.getElementById("info").innerHTML = metadata_Gemeentefonds; document.getElementById("legenda").innerHTML = legenda_Gemeentefonds; checked_layer = 'Gemeentefonds';}} else {checks[4].checked = false;}
+            if (a.layer.options.name == 'Gemeenterekening') {if (checked_layer != 'Gemeenterekening') {document.getElementById("info").innerHTML = metadata_Gemeenterekening; document.getElementById("legenda").innerHTML = legenda_Gemeenterekening; checked_layer = 'Gemeenterekening';}} else {checks[5].checked = false;}
+            if (a.layer.options.name == 'GOAB') {if (checked_layer != 'GOAB') {document.getElementById("info").innerHTML = metadata_GOAB; document.getElementById("legenda").innerHTML = legenda_GOAB; checked_layer = 'GOAB';}} else {checks[6].checked = false;}
+            if (a.layer.options.name == 'Subsidies') {if (checked_layer != 'Subsidies') {document.getElementById("info").innerHTML = metadata_Subsidies; document.getElementById("legenda").innerHTML = legenda_Subsidies; checked_layer = 'Subsidies';}} else {checks[7].checked = false;}
+        });
+
+        var baseMaps = {};
+        L.control.layers(baseMaps,{'Totaal geldstromen (miljoen €)<br />': layer_Totaalgeldstromen,
+                                              'Uitgaven per leerling (€)<br />': layer_Uitgavenperleerling,
+                                              'Uitgaven per inwoner (€)<br />': layer_Uitgavenperinwoner,
+                                              'Totaal bekostiging (miljoen €)<br />': layer_Totaalbekostiging,
+                                              'Gemeentefonds (miljoen €)<br />': layer_Gemeentefonds,
+                                              'Gemeenterekening (miljoen €)<br />': layer_Gemeenterekening,
+                                              'GOAB (miljoen €)<br />': layer_GOAB,
+                                              'Subsidies (duizend €)<br />': layer_Subsidies,
+                                             },{collapsed:false}).addTo(map);
+        setBounds();
+        </script>
+    </body>
+</html>
