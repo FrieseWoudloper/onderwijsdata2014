@@ -1,4 +1,4 @@
-# Viewer voor onderwijsdata uit 2014 - inzending voor Accountability Hack 2017
+# Onderwijsdata 2014 - Geldstromen in Kaart
 
 Deze kaart is gemaakt ten behoeve van de open data challenge voor financial trainees van het ministerie van Financiën. De challenge was onderdeel van [Accountability Hack 2017](https://accountabilityhack.nl/). In verschillende teams gingen de trainees aan de slag, met als doel open datasets aan elkaar te koppelen en daarmee interessante beleidsconclusies te trekken. Het team *Geldstromen in Kaart* richtte zich op het in kaart brengen van de verschillende geldstromen, dat over een aantal ministeries verspreid is, naar het primair onderwijs. Per gemeente zijn de geldstromen berekend, waardoor duidelijk de verschillen kunnen worden gevisualiseerd met behulp van de interactieve kaart. Het team heeft de kaart gepresenteerd tijdens de hackaton van de Algemene Rekenkamer en voor een jury van Hillie Beentjes (directeur begrotingszaken Financiën),  Mark Smolenaars (Algemene Rekenkamer) en Eric Bezem (directeur FEZ Veiligheid en Justitie).
 
